@@ -1,0 +1,9 @@
+<launch>
+
+  <node pkg="laser_filters" type="scan_filtered1" name="scan_filtered11">
+  </node>
+
+</launch>
+<!--
+name是给这个节点起的名字，pkg是工作空间中节点包的名称，
+type是包中需要运行的具体节点 -->
