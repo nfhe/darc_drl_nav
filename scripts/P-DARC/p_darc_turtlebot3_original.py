@@ -6,10 +6,10 @@ import torch
 import os
 import random
 import datetime
-import peemr_darc_ddpg_utils
-import PEEMR_DARC
+import p_darc_ddpg_utils
+import P_DARC
 from torch.utils.tensorboard import SummaryWriter
-import turtlebot_turtlebot3_peemr_darcddpg_env
+import turtlebot_turtlebot3_p_darc_env
 import rospy
 
 SEED = 1234
@@ -24,8 +24,8 @@ random.seed(SEED)
 class Args:
 	def __init__(self,env):
 		self.env = env
-		self.env_name = "Turtlebot3Turtlebot3Env-v0"
-		self.policy = "PEEMR-DARC"
+		self.env_name = "Turtlebot3Env-v0"
+		self.policy = "P-DARC"
 		self.seed = 1234
 		self.start_steps = 1e4
 		self.eval_freq = 5e3
@@ -40,7 +40,8 @@ class Args:
 		self.replay_size = 2e6
 		self.save_model = True
 		self.save_freq = 1e4
-		self.hidden_sizes = '300,400,400'
+		self.actor_hidden_sizes = '300,300,400'
+		self.critic_hidden_sizes = '300,400,400,400'
 		self.actor_lr = 0.0003
 		self.critic_lr = 0.0003
 		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -50,11 +51,11 @@ class Args:
 		self.current_time = datetime.datetime.now().strftime("%Y-%m-%d")
 		self.dir ='/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time
 		self.logs_dir ='/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/'
-		self.peemr_darc_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMR-DARC/'
-		self.model_path = '/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMR-DARC/'
-		self.actor_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMR-DARC/actor/'
-		self.critic1_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMR-DARC/critic1/'
-		self.critic2_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMR-DARC/critic2/'
+		self.peemr_darc_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/P-DARC/'
+		self.model_path = '/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/P-DARC/'
+		self.actor_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/P-DARC/actor/'
+		self.critic1_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/P-DARC/critic1/'
+		self.critic2_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/P-DARC/critic2/'
 		self.actor_path = self.model_path + 'actor/'
 		self.critic1_path = self.model_path + 'critic1/'
 		self.critic2_path = self.model_path + 'critic2/'
@@ -86,7 +87,7 @@ class Args:
 
 if __name__ == "__main__":
 		########################################################
-	game_state= turtlebot_turtlebot3_peemr_darcddpg_env.GameState()   # game_state has frame_step(action) function
+	game_state= turtlebot_turtlebot3_p_darc_env.GameState()   # game_state has frame_step(action) function
 	# Create a parser for robot.
 	args = Args(env=game_state)
 	print("------------------------------------------------------------")
@@ -99,7 +100,8 @@ if __name__ == "__main__":
 		"max_action": args.max_action,
 		"discount": args.discount,
 		"tau": args.tau,
-		"hidden_sizes": [int(hs) for hs in args.hidden_sizes.split(',')],
+		"actor_hidden_sizes": [int(hs) for hs in args.actor_hidden_sizes.split(',')],
+		"critic_hidden_sizes": [int(hs) for hs in args.critic_hidden_sizes.split(',')],
 		"actor_lr": args.actor_lr,
 		"critic_lr": args.critic_lr,
 		"device": args.device,
@@ -107,7 +109,7 @@ if __name__ == "__main__":
 	}
 
 	# Create a model for PEEMR-DARC.
-	policy = PEEMR_DARC.PEEMR_DARC(**kwargs)
+	policy = P_DARC.PEEMR_DARC(**kwargs)
 
 	# check if the model is loaded from a file
 	# if args.load_model is not None:
@@ -120,7 +122,7 @@ if __name__ == "__main__":
 			f.write('\n {}'.format(item))
 
     # Create a experience replay buffer.
-	replay_buffer = peemr_darc_ddpg_utils.ReplayBuffer(args.state_dim, args.action_dim,args.device)
+	replay_buffer = p_darc_ddpg_utils.ReplayBuffer(args.state_dim, args.action_dim,args.device)
 
 	for i in range(args.num_trials):
 		print("************************************************")

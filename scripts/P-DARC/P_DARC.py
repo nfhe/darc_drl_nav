@@ -2,7 +2,7 @@
 
 import copy
 import numpy as np
-import darc_utils
+import p_darc_ddpg_utils
 # import time
 
 import torch
@@ -17,81 +17,74 @@ torch.backends.cudnn.benchmark = False
 torch.cuda.manual_seed_all(SEED)
 
 class Actor(nn.Module):
-	def __init__(self, state_dim, action_dim, max_action, hidden_sizes=[400, 300]):
-		super(Actor, self).__init__()
+    def __init__(self, state_dim, action_dim, max_action, hidden_sizes):
+        super(Actor, self).__init__()
+        self.l1 = nn.Linear(state_dim, hidden_sizes[0])
+        self.l2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
+        self.l3 = nn.Linear(hidden_sizes[1], hidden_sizes[2])
+        self.l4 = nn.Linear(hidden_sizes[2], action_dim)
+        self.max_action = max_action
 
-		self.l1 = nn.Linear(state_dim, hidden_sizes[0])
-		self.l2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
-		self.l3 = nn.Linear(hidden_sizes[1], hidden_sizes[2])
-		self.l4 = nn.Linear(hidden_sizes[2], action_dim)
-
-		self.max_action = max_action
-
-
-	def forward(self, state):
-		a = F.relu(self.l1(state))
-		a = F.relu(self.l2(a))
-		a = F.relu(self.l3(a))
-
-		return self.max_action * torch.tanh(self.l4(a))
+    def forward(self, state):
+        a = F.relu(self.l1(state))
+        a = F.relu(self.l2(a))
+        a = F.relu(self.l3(a))
+        return self.max_action * torch.tanh(self.l4(a))
 
 class Critic(nn.Module):
-	def __init__(self, state_dim, action_dim, hidden_sizes=[400, 300]):
-		super(Critic, self).__init__()
+    def __init__(self, state_dim, action_dim, hidden_sizes):
+        super(Critic, self).__init__()
+        self.l1 = nn.Linear(state_dim + action_dim, hidden_sizes[0])
+        self.l2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
+        self.l3 = nn.Linear(hidden_sizes[1], hidden_sizes[2])
+        self.l4 = nn.Linear(hidden_sizes[2], hidden_sizes[3])
+        self.l5 = nn.Linear(hidden_sizes[3], 1)
 
-		self.l1 = nn.Linear(state_dim + action_dim, hidden_sizes[0])
-		self.l2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
-		self.l3 = nn.Linear(hidden_sizes[1], hidden_sizes[2])
-		self.l4 = nn.Linear(hidden_sizes[2], hidden_sizes[3])
-		self.l5 = nn.Linear(hidden_sizes[3], 1)
+    def forward(self, state, action):
+        q = F.relu(self.l1(torch.cat([state, action], 1)))
+        q = F.relu(self.l2(q))
+        q = F.relu(self.l3(q))
+        q = F.relu(self.l4(q))
+        return self.l5(q)
 
+    def Q1(self, state, action):
+        sa = torch.cat([state, action], 1)
 
-	def forward(self, state, action):
-		if len(state.shape) == 3:
-			sa = torch.cat([state, action], 2)
-		else:
-			sa = torch.cat([state, action], 1)
+        q1 = F.relu(self.l1(sa))
+        q1 = F.relu(self.l2(q1))
+        q1 = F.relu(self.l3(q1))
+        q1 = self.l4(q1)
 
-		q = F.relu(self.l1(torch.cat([state, action], 1)))
-		q = F.relu(self.l2(q))
-		q = F.relu(self.l3(q))
-		q = F.relu(self.l4(q))
-		return self.l5(q)
+        return q1
 
-
-
-
-class DARC(object):
+class PEEMR_DARC(object):
 	def __init__(
-		self,
+        self,
 		state_dim,
 		action_dim,
 		max_action,
 		device,
-        env,
+		env,
 		discount=0.99,
 		tau=0.005,
 		policy_noise=0.2,
 		noise_clip=0.5,
+        policy_freq=2,
 		actor_lr=1e-3,
 		critic_lr=1e-3,
 		hidden_sizes=[400, 300],
-		q_weight=0.1,
-		regularization_weight = 0.005,
-        epsilon = 0.9,
+		epsilon = 0.9,
 		epsilon_decay = .99995,
 		expl_noise = 0.1,
-	):
+
+    ):
+
 		self.device = device
 		self.env = env
 
-		self.actor1 = Actor(state_dim, action_dim, max_action, hidden_sizes).to(self.device)
-		self.actor1_target = copy.deepcopy(self.actor1)
-		self.actor1_optimizer = torch.optim.Adam(self.actor1.parameters(), lr=actor_lr)
-
-		self.actor2 = Actor(state_dim, action_dim, max_action, hidden_sizes).to(self.device)
-		self.actor2_target = copy.deepcopy(self.actor2)
-		self.actor2_optimizer = torch.optim.Adam(self.actor2.parameters(), lr=actor_lr)
+		self.actor = Actor(state_dim, action_dim, max_action, hidden_sizes).to(self.device)
+		self.actor_target = copy.deepcopy(self.actor)
+		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
 
 		self.critic1 = Critic(state_dim, action_dim, hidden_sizes).to(self.device)
 		self.critic1_target = copy.deepcopy(self.critic1)
@@ -101,36 +94,32 @@ class DARC(object):
 		self.critic2_target = copy.deepcopy(self.critic2)
 		self.critic2_optimizer = torch.optim.Adam(self.critic2.parameters(), lr=critic_lr)
 
-		self.max_action = max_action
+		self.max_action = max_action + 0.5
 		self.min_action = -self.max_action
 
 		self.discount = discount
 		self.tau = tau
 		self.policy_noise = policy_noise
 		self.noise_clip = noise_clip
-		self.q_weight = q_weight
-		self.regularization_weight = regularization_weight
 
 		self.epsilon = epsilon
 		self.epsilon_decay = epsilon_decay
 		self.action_dim = action_dim
 		self.expl_noise = expl_noise
+		self.policy_freq = policy_freq
 
+		self.total_it = 0
+		self.buffer_proportion = 1.75
 
-	def read_Q_values(self, state, action):
+	def read_peemr_darc_Q_values(self, state,action):
 		state = torch.FloatTensor(state.reshape(1, -1)).to(self.device)
 		action = torch.FloatTensor(action.reshape(1, -1)).to(self.device)
-
 		q1 = self.critic1(state, action)
 		q2 = self.critic2(state, action)
-
-		# Get the min of the two tensors
-		# q = torch.max(q1, q2)
-		q = torch.min(q1, q2)
-
+		q = torch.min(q1,q2)
 		return q
 
-	def darc_act(self, state):
+	def act_peerm_darc(self, state):
 		self.epsilon *= self.epsilon_decay
 		self.epsilon = max(0.01, self.epsilon)
 		if np.random.rand() < self.epsilon:
@@ -140,7 +129,6 @@ class DARC(object):
 				self.select_action(np.array(state)) + np.random.normal(0, self.max_action * self.expl_noise, size=self.action_dim)
 			).clip(-self.max_action, self.max_action)
 		return action
-
 
 	def select_action(self, state):
 		state = torch.FloatTensor(state.reshape(1, -1)).to(self.device)
@@ -154,7 +142,6 @@ class DARC(object):
 		action = action1 if q1 >= q2 else action2
 
 		return action.cpu().data.numpy().flatten()
-
 
 	def train(self, replay_buffer, batch_size, buffer_size):
 		if buffer_size < batch_size:
@@ -241,35 +228,24 @@ class DARC(object):
 			for param, target_param in zip(self.actor2.parameters(), self.actor2_target.parameters()):
 				target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
-	def save(self, actor1_path,actor2_path,critic1_path,critic2_path,num_trials,i):
+	def save(self, actor_path,critic1_path,critic2_path,num_trials,i):
 		torch.save(self.critic1.state_dict(), critic1_path +'critic1_model'+ '-' + str(i)+ '-' +str(num_trials))
 		torch.save(self.critic1_optimizer.state_dict(), critic1_path + 'critic1_optimizer'+ '-' + str(i)+ '-' +str(num_trials))
-		torch.save(self.actor1.state_dict(), actor1_path + 'actor1_model'+ '-' + str(i)+ '-' +str(num_trials))
-		torch.save(self.actor1_optimizer.state_dict(), actor1_path + 'actor1_optimizer'+ '-' + str(i)+ '-' +str(num_trials))
-
-		torch.save(self.critic2.state_dict(), critic2_path + 'critic2_model'+ '-' + str(i)+ '-' +str(num_trials))
+		torch.save(self.critic2.state_dict(), critic2_path +'critic2_model'+ '-' + str(i)+ '-' +str(num_trials))
 		torch.save(self.critic2_optimizer.state_dict(), critic2_path + 'critic2_optimizer'+ '-' + str(i)+ '-' +str(num_trials))
-		torch.save(self.actor2.state_dict(), actor2_path +  'actor2_model'+ '-' + str(i)+ '-' +str(num_trials))
-		torch.save(self.actor2_optimizer.state_dict(), actor2_path + 'actor2_optimizer'+ '-' + str(i)+ '-' +str(num_trials))
 
-	# def load(self, filename):
-	# 	self.critic1.load_state_dict(torch.load(filename + "_critic1"))
-	# 	self.critic1_optimizer.load_state_dict(torch.load(filename + "_critic1_optimizer"))
-	# 	self.actor1.load_state_dict(torch.load(filename + "_actor1"))
-	# 	self.actor1_optimizer.load_state_dict(torch.load(filename + "_actor1_optimizer"))
+		torch.save(self.actor.state_dict(), actor_path + 'actor_model'+ '-' + str(i)+ '-' +str(num_trials))
+		torch.save(self.actor_optimizer.state_dict(), actor_path + 'actor_optimizer'+ '-' + str(i)+ '-' +str(num_trials))
 
-	# 	self.critic2.load_state_dict(torch.load(filename + "_critic2"))
-	# 	self.critic2_optimizer.load_state_dict(torch.load(filename + "_critic2_optimizer"))
-	# 	self.actor2.load_state_dict(torch.load(filename + "_actor2"))
-	# 	self.actor2_optimizer.load_state_dict(torch.load(filename + "_actor2_optimizer"))
-
-	def load(self, actor1_path,actor2_path,critic1_path,critic2_path,num_trials,i):
+	def load(self, actor_path,critic1_path,critic2_path,num_trials,i):
 		self.critic1.load_state_dict(torch.load(critic1_path +'critic1_model'+ '-' + str(i)+ '-' +str(num_trials)))
 		self.critic1_optimizer.load_state_dict(torch.load(critic1_path + 'critic1_optimizer'+ '-' + str(i)+ '-' +str(num_trials)))
 		self.critic2.load_state_dict(torch.load(critic2_path +'critic2_model'+ '-' + str(i)+ '-' +str(num_trials)))
 		self.critic2_optimizer.load_state_dict(torch.load(critic2_path + 'critic2_optimizer'+ '-' + str(i)+ '-' +str(num_trials)))
 
-		self.actor1.load_state_dict(torch.load(actor1_path + 'actor1_model'+ '-' + str(i)+ '-' +str(num_trials)))
-		self.actor1_optimizer.load_state_dict(torch.load(actor1_path + 'actor1_optimizer'+ '-' + str(i)+ '-' +str(num_trials)))
-		self.actor2.load_state_dict(torch.load(actor2_path + 'actor2_model'+ '-' + str(i)+ '-' +str(num_trials)))
-		self.actor2_optimizer.load_state_dict(torch.load(actor2_path + 'actor2_optimizer'+ '-' + str(i)+ '-' +str(num_trials)))
+		self.actor.load_state_dict(torch.load(actor_path + 'actor_model'+ '-' + str(i)+ '-' +str(num_trials)))
+		self.actor_optimizer.load_state_dict(torch.load(actor_path + 'actor_optimizer'+ '-' + str(i)+ '-' +str(num_trials)))
+
+
+
+

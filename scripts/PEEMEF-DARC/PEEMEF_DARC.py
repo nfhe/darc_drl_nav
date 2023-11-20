@@ -37,13 +37,15 @@ class Critic(nn.Module):
         self.l1 = nn.Linear(state_dim + action_dim, hidden_sizes[0])
         self.l2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
         self.l3 = nn.Linear(hidden_sizes[1], hidden_sizes[2])
-        self.l4 = nn.Linear(hidden_sizes[2], 1)
+        self.l4 = nn.Linear(hidden_sizes[2], hidden_sizes[3])
+        self.l5 = nn.Linear(hidden_sizes[3], 1)
 
     def forward(self, state, action):
         q = F.relu(self.l1(torch.cat([state, action], 1)))
         q = F.relu(self.l2(q))
         q = F.relu(self.l3(q))
-        return self.l4(q)
+        q = F.relu(self.l4(q))
+        return self.l5(q)
 
     def Q1(self, state, action):
         sa = torch.cat([state, action], 1)

@@ -1,19 +1,15 @@
 # coding=utf-8
-# tensorboard --logdir "/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/DARC/2023-04-09" --port 6006 --samples_per_plugin scalars=0
+# tensorboard --logdir "/home/dog/catkin_avoidance/src/turtlebot3_ddpg_nav/weight/PEEMEF-DARC/2023-10-25" --port 6006 --samples_per_plugin scalars=0
 
 import numpy as np
 import torch
-import gym
-import argparse
 import os
 import random
-import math
-import time
 import datetime
-import darc_utils
-import DARC
+import peemef_darc_utils
+import PEEMEF_DARC
 from torch.utils.tensorboard import SummaryWriter
-import turtlebot_turtlebot3_darc_env
+import turtlebot_turtlebot3_peemef_darc_env
 import rospy
 
 SEED = 1234
@@ -24,13 +20,12 @@ torch.backends.cudnn.benchmark = False
 torch.cuda.manual_seed_all(SEED)
 random.seed(SEED)
 
-
 # 生成参数类
 class Args:
 	def __init__(self,env):
 		self.env = env
 		self.env_name = "Turtlebot3Env-v0"
-		self.policy = "DARC"
+		self.policy = "PEEMEF-DARC"
 		self.seed = 1234
 		self.start_steps = 1e4
 		self.eval_freq = 5e3
@@ -56,19 +51,17 @@ class Args:
 		self.current_time = datetime.datetime.now().strftime("%Y-%m-%d")
 		self.dir ='/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time
 		self.logs_dir ='/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/'
-		self.darc_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/DARC/'
-		self.model_path = '/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/DARC/'
-		self.actor1_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/DARC/actor1/'
-		self.actor2_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/DARC/actor2/'
-		self.critic1_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/DARC/critic1/'
-		self.critic2_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/DARC/critic2/'
-		self.actor1_path = self.model_path + 'actor1/'
-		self.actor2_path = self.model_path + 'actor2/'
+		self.peemr_darc_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMEF-DARC/'
+		self.model_path = '/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMEF-DARC/'
+		self.actor_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMEF-DARC/actor/'
+		self.critic1_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMEF-DARC/critic1/'
+		self.critic2_mkdir_path = r'/home/he/catkin_nav/src/turtlebot3_ddpg_nav/weight/{}/'.format(self.policy) + self.current_time +'/PEEMEF-DARC/critic2/'
+		self.actor_path = self.model_path + 'actor/'
 		self.critic1_path = self.model_path + 'critic1/'
 		self.critic2_path = self.model_path + 'critic2/'
 		self.writer = SummaryWriter(self.dir)
-		self.darc_mkdir()
-		self.num_trials = 500
+		self.peemr_darc_mkdir()
+		self.num_trials = 1000
 		self.trial_len = 700
 		self.counter = 0
 		self.five_average_reward = 0
@@ -82,20 +75,19 @@ class Args:
 		self.action_dim = env.action_space.shape[0]	#2
 		self.max_action = float(1.0)
 
-	def darc_mkdir(self):
-		darc_mkdir_exists =os.path.exists(self.darc_path)
-		if darc_mkdir_exists ==True:
+	def peemr_darc_mkdir(self):
+		peemr_darc_mkdir_exists =os.path.exists(self.peemr_darc_path)
+		if peemr_darc_mkdir_exists ==True:
 			pass
 		else:
-			os.mkdir(self.darc_path)
-			os.mkdir(self.actor1_mkdir_path)
-			os.mkdir(self.actor2_mkdir_path)
+			os.mkdir(self.peemr_darc_path)
+			os.mkdir(self.actor_mkdir_path)
 			os.mkdir(self.critic1_mkdir_path)
 			os.mkdir(self.critic2_mkdir_path)
 
 if __name__ == "__main__":
 		########################################################
-	game_state= turtlebot_turtlebot3_darc_env.GameState()   # game_state has frame_step(action) function
+	game_state= turtlebot_turtlebot3_peemef_darc_env.GameState()   # game_state has frame_step(action) function
 	# Create a parser for robot.
 	args = Args(env=game_state)
 	print("------------------------------------------------------------")
@@ -116,8 +108,8 @@ if __name__ == "__main__":
 		"env":game_state,
 	}
 
-	# Create a model for DARC.
-	policy = DARC.DARC(**kwargs)
+	# Create a model for PEEMEF-DARC.
+	policy = PEEMEF_DARC.PEEMR_DARC(**kwargs)
 
 	# check if the model is loaded from a file
 	# if args.load_model is not None:
@@ -129,7 +121,8 @@ if __name__ == "__main__":
 		for item in kwargs.items():
 			f.write('\n {}'.format(item))
 
-	replay_buffer = darc_utils.ReplayBuffer(args.state_dim, args.action_dim, args.device)
+    # Create a experience replay buffer.
+	replay_buffer = peemef_darc_utils.ReplayBuffer(args.state_dim, args.action_dim,args.device)
 
 	for i in range(args.num_trials):
 		print("************************************************")
@@ -146,7 +139,7 @@ if __name__ == "__main__":
 			# print("trials length:" + str(j))
 
 			# select action randomly or according to policy
-			action = policy.darc_act(current)
+			action = policy.act_peerm_darc(current)
 
 			#Obtain the next  state based on the current action
 			reward,next_state, crashed_value,arrive_reward = game_state.game_step(0.1, action[1], action[0])
@@ -162,7 +155,7 @@ if __name__ == "__main__":
 				print("this is total reward:", args.total_reward)
 
 			args.five_average_reward = args.five_average_reward + reward
-			args.five_average_Q_values = args.five_average_Q_values + policy.read_Q_values(current, action)
+			args.five_average_Q_values = args.five_average_Q_values + policy.read_peemr_darc_Q_values(current, action)
 
 			if args.counter % 5 == 0:
 				args.step += 1
@@ -176,17 +169,19 @@ if __name__ == "__main__":
 			if (j % 5 == 0):
 				policy.train(replay_buffer, args.batch_size,args.buffer_size)
 
-			# if args.step % 100 == 0:
-			# 	rospy.loginfo("UPDATE TARGET NETWORK!")
+			if args.step % 200 == 0:
+				rospy.loginfo("UPDATE TARGET NETWORK!")
 
 			# update current state
 			current = next_state
 
 			if crashed_value == 1:
 				rospy.loginfo("Robot collides with obstacles!!!")
+				game_state.stop_robot()
 				break
 			if arrive_reward  >= 100:
 				rospy.loginfo("Robot arrives the goal!!!")
+				game_state.stop_robot()
 				break
 
 		# Save the total reward
@@ -194,7 +189,7 @@ if __name__ == "__main__":
 
 		# Save the model
 		if i % 10 == 0:
-			policy.save(args.actor1_path,args.actor2_path,args.critic1_path,args.critic2_path, args.num_trials,i)
+			policy.save(args.actor_path,args.critic1_path,args.critic2_path, args.num_trials,i)
 
 # args.writer.close()
 

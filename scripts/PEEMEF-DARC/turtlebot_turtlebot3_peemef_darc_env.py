@@ -51,7 +51,7 @@ class InfoGetter(object):
 class GameState:
 
     def __init__(self):
-        self.talker_node = rospy.init_node('turtlebot3_original_darc', anonymous=True)
+        self.talker_node = rospy.init_node('turtlebot3_peemef_ddpg', anonymous=True)
         self.pose_ig = InfoGetter()
         self.laser_ig = InfoGetter()
         self.collision_ig = InfoGetter()
