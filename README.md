@@ -54,18 +54,38 @@ roslaunch turtlebot_darc turtlebot3_empty_world.launch world_file:='/home/he/cat
 roslaunch turtlebot_darc turtlebot3_empty_world.launch world_file:='/home/he/catkin_nav/src/turtlebot3_darc_nav/turtlebot_darc/world/record_maze.world'
 ```
 ### 3.For train and test
+#### For train and play with darc with human data.
+(1).open the environment.
 ```bash
-(1).For train and play with ddpg with human data.
  cd ~/catkin_nav/src/turtlebot3_darc_nav/turtlebot_nav/scripts/record_data
-
- (2).python record_control.py && record_data.py
-```
-For training
+ ```
+(2).Open two terminals and run the py
 ```bash
- (1).cd ~/catkin_nav/src/turtlebot3_darc_nav/turtlebot_nav/scripts
-
- (2).python darc_turtlebot3_original_darc.py || python p_darc_turtlebot3_original.py || python turtlebot_turtlebot3_peemef_darc_env.py
+python record_control.py
 ```
+```bash
+python record_data.py
+```
+
+For training
+ (1).open the environment.
+```bash
+cd ~/catkin_nav/src/turtlebot3_darc_nav/turtlebot_nav/scripts
+```
+(2).Open the terminal and run one of the following Python files
+
+```bash
+python darc_turtlebot3_original_darc.py
+```
+
+```bash
+python p_darc_turtlebot3_original.py
+```
+
+```bash
+python turtlebot_turtlebot3_peemef_darc_env.py
+```
+
 
 
 ## Authors
