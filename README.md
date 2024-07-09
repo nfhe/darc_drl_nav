@@ -16,9 +16,7 @@ Ensure you have the following software installed on your machine:
 
 - Ubuntu 18.04
 - ROS Melodic
-- TensorFlow-GPU (1.13.1 or 1.14.0)
 - PyTorch (1.4)
-- Keras (2.3.1)
 - NumPy (1.16.6)
 
 ### Installation Steps
