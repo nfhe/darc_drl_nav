@@ -2,7 +2,7 @@
 
 ## Project Description
 
-P_EEMEF_DARC is an robotics project focusing on autonomous navigation and collision avoidance using deep reinforcement learning.The main purpose is to provide a robust framework for TurtleBot3 to navigate complex environments autonomously.
+P_EEMEF_DARC is an advanced robotics project focusing on autonomous navigation and collision avoidance using deep reinforcement learning. The project integrates various technologies, including ROS Melodic, TensorFlow, PyTorch, and Keras, to achieve efficient and reliable robot control. The main purpose is to provide a robust framework for TurtleBot3 to navigate complex environments autonomously.
 
 **Demo Video:** [Watch Here](https://youtu.be/MnyCGTHqN8g)
 
@@ -55,31 +55,29 @@ Ensure you have the following software installed on your machine:
 
 ## Usage
 
-### Launch Gazebo World
+### 1. Launch Gazebo World
 
 To start the simulation in Gazebo, use the following commands to launch different environments:
 
-#### Corridor 1 World
-
+1.1. Launch Corridor 1 World
 ```bash
 roslaunch turtlebot_darc turtlebot3_empty_world.launch world_file:='/home/he/catkin_nav/src/turtlebot3_darc_nav/turtlebot_darc/world/3_corridor.world'
 ```
 
-#### Corridor 2 World
-
+1.2. Launch Corridor 2 World
 ```bash
 roslaunch turtlebot_darc turtlebot3_empty_world.launch world_file:='/home/he/catkin_nav/src/turtlebot3_darc_nav/turtlebot_darc/world/2_corridor.world'
 ```
 
-### Collect Priority Excellent Experience Data
+### 2. Collect Priority Excellent Experience Data
 
 ```bash
 roslaunch turtlebot_darc turtlebot3_empty_world.launch world_file:='/home/he/catkin_nav/src/turtlebot3_darc_nav/turtlebot_darc/world/record_maze.world'
 ```
 
-### Train and Test
+### 3. Train and Test
 
-#### Train and Play with DARC Using Human Data
+3.1. Train and Play with DARC Using Human Data
 
 1. Open the environment:
     ```bash
@@ -92,7 +90,7 @@ roslaunch turtlebot_darc turtlebot3_empty_world.launch world_file:='/home/he/cat
     python record_data.py
     ```
 
-#### Training
+3.2. Training
 
 1. Open the environment:
     ```bash
