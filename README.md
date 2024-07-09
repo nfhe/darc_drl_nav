@@ -2,7 +2,7 @@
 
 ## Project Description
 
-P_EEMEF_DARC is an advanced robotics project focusing on autonomous navigation and collision avoidance using deep reinforcement learning. The project integrates various technologies, including ROS Melodic, TensorFlow, PyTorch, and Keras, to achieve efficient and reliable robot control. The main purpose is to provide a robust framework for TurtleBot3 to navigate complex environments autonomously.
+P_EEMEF_DARC is an advanced robotics project focusing on autonomous navigation and collision avoidance using deep reinforcement learning. The main purpose is to provide a robust framework for TurtleBot3 to navigate complex environments autonomously.
 
 **Demo Video:** [Watch Here](https://youtu.be/MnyCGTHqN8g)
 
